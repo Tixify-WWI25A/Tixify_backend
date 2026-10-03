@@ -9,7 +9,9 @@ const routes = [
 ];
 
 routes.forEach(([method, path, handlerName]) => {
-  const HandlerClass = require(`../handlers/${handlerName}`);
+  const imported = require(`../handlers/${handlerName}`);
+  console.log(`Prüfe ${handlerName}:`, typeof imported, imported);
+  const HandlerClass = imported;
   const handlerInstance = new HandlerClass();
 
   router[method](path, (req, res) => handlerInstance.execute(req, res));
