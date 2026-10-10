@@ -24,9 +24,9 @@ class CapturePaypalOrderHandler {
       const userResult = await db.query('SELECT email FROM users WHERE user_id = $1', [userId]);
       const userEmail = userResult.rows[0]?.email;
 
-      // 2. Warenkorb abfragen (jetzt inkl. e.name für den Eventnamen in der E-Mail)
+      // 2. Warenkorb abfragen (mit e.title statt e.name)
       const cartResult = await db.query(
-        `SELECT ci.event_id, ci.quantity, e.price, e.name 
+        `SELECT ci.event_id, ci.quantity, e.price, e.title 
          FROM cart_items ci
          JOIN carts c ON ci.cart_id = c.cart_id
          JOIN events e ON ci.event_id = e.event_id
@@ -76,7 +76,7 @@ class CapturePaypalOrderHandler {
       try {
         if (userEmail) {
           const qrBuffer = await QRCode.toBuffer(`TIXIFY-ORDER-${orderId}`);
-          const eventNames = cartResult.rows.map(item => item.name).join(', ');
+          const eventNames = cartResult.rows.map(item => item.title).join(', ');
 
           const mailOptions = {
             from: `"Tixify" <${process.env.SENDER_EMAIL}>`,
@@ -111,7 +111,6 @@ class CapturePaypalOrderHandler {
         }
       } catch (emailError) {
         console.error('Fehler beim Senden der E-Mail:', emailError);
-        // Kauf läuft trotzdem erfolgreich durch, falls die E-Mail mal klemmen sollte
       }
 
       return res.status(200).json({
