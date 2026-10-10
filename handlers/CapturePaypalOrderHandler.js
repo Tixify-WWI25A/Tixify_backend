@@ -1,6 +1,8 @@
 const db = require('../config/db');
 const { captureOrder } = require('../config/paypal');
 const crypto = require('crypto');
+const QRCode = require('qrcode');
+const transporter = require('../config/mailer');
 
 class CapturePaypalOrderHandler {
   async execute(req, res) {
@@ -18,8 +20,13 @@ class CapturePaypalOrderHandler {
         return res.status(400).json({ error: 'Zahlung konnte nicht abgeschlossen werden' });
       }
 
+      // 1. E-Mail-Adresse des eingeloggten Users aus der Datenbank holen
+      const userResult = await db.query('SELECT email FROM users WHERE user_id = $1', [userId]);
+      const userEmail = userResult.rows[0]?.email;
+
+      // 2. Warenkorb abfragen (jetzt inkl. e.name für den Eventnamen in der E-Mail)
       const cartResult = await db.query(
-        `SELECT ci.event_id, ci.quantity, e.price 
+        `SELECT ci.event_id, ci.quantity, e.price, e.name 
          FROM cart_items ci
          JOIN carts c ON ci.cart_id = c.cart_id
          JOIN events e ON ci.event_id = e.event_id
@@ -64,6 +71,48 @@ class CapturePaypalOrderHandler {
         `DELETE FROM cart_items WHERE cart_id = (SELECT cart_id FROM carts WHERE user_id = $1)`,
         [userId]
       );
+
+      // 3. QR-Code generieren und Bestätigungs-E-Mail senden
+      try {
+        if (userEmail) {
+          const qrBuffer = await QRCode.toBuffer(`TIXIFY-ORDER-${orderId}`);
+          const eventNames = cartResult.rows.map(item => item.name).join(', ');
+
+          const mailOptions = {
+            from: `"Tixify" <${process.env.SENDER_EMAIL}>`,
+            to: userEmail,
+            subject: `Bestätigung für deine Bestellung #${orderId}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px;">
+                <h2 style="color: #4A3AFF;">Buchung erfolgreich!</h2>
+                <p>Vielen Dank für deinen Einkauf bei Tixify. Deine Tickets wurden ausgestellt.</p>
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                  <p style="margin: 5px 0;"><strong>Bestellnummer:</strong> #${orderId}</p>
+                  <p style="margin: 5px 0;"><strong>Event(s):</strong> ${eventNames}</p>
+                  <p style="margin: 5px 0;"><strong>Gesamtbetrag:</strong> ${totalAmount} €</p>
+                </div>
+                <p><strong>Dein QR-Code für den Einlass:</strong></p>
+                <div style="text-align: center; margin: 20px 0;">
+                  <img src="cid:qrcode_image" alt="QR-Code Ticket" style="width: 200px; height: 200px;" />
+                </div>
+              </div>
+            `,
+            attachments: [
+              {
+                filename: `ticket-${orderId}.png`,
+                content: qrBuffer,
+                cid: 'qrcode_image'
+              }
+            ]
+          };
+
+          await transporter.sendMail(mailOptions);
+          console.log(`E-Mail erfolgreich an ${userEmail} gesendet!`);
+        }
+      } catch (emailError) {
+        console.error('Fehler beim Senden der E-Mail:', emailError);
+        // Kauf läuft trotzdem erfolgreich durch, falls die E-Mail mal klemmen sollte
+      }
 
       return res.status(200).json({
         message: 'Kauf erfolgreich abgeschlossen!',
