@@ -2,29 +2,30 @@ const pool = require('../config/db');
 
 class CreateEventHandler {
     async execute(req, res) {
-        const { title, description, location, event_date, price, logo_url, event_stock } = req.body;
+        const { title, description, location, category, event_date, price, logo_url, event_stock } = req.body;
 
         // Validierung der Pflichtfelder
         if (!title || !location || !event_date || price === undefined || event_stock === undefined) {
             return res.status(400).json({
-            error: 'Pflichtfelder fehlen: title, location, event_date, price und event_stock sind erforderlich.'
+                error: 'Pflichtfelder fehlen: title, location, event_date, price und event_stock sind erforderlich.'
             });
         }
 
         try {
             const query = `
-              INSERT INTO events (title, description, location, event_date, price, logo_url, event_stock)
-              VALUES ($1, $2, $3, $4, $5, $6, $7)
+              INSERT INTO events (title, description, location, category, event_date, price, logo_url, event_stock)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
               RETURNING *;
             `;
-           
+            
             const values = [
               title,
               description || '',
               location,
+              category || 'Konzerte',
               event_date,
               parseFloat(price),
-              logo_url || '',
+              logo_url || null,
               parseInt(event_stock, 10)
             ];
 
