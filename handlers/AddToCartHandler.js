@@ -1,58 +1,65 @@
-const pool = require('../config/db');
+const db = require('../config/db');
 
 class AddToCartHandler {
-    async execute(req, res) {
-        const userId = req.user.userId;
-        const { eventId, quantity = 1 } = req.body;
+  async execute(req, res) {
+    const userId = req.user.userId;
+    const { eventId, quantity, delta } = req.body;
 
-        if (!eventId) {
-            return res.status(400).json({ error: 'Event ID erforderlich.' });
+    if (!eventId || (!quantity && delta === undefined)) {
+      return res.status(400).json({ error: 'Ungültige Eingabedaten' });
+    }
+
+    try {
+      let cartResult = await db.query('SELECT cart_id FROM carts WHERE user_id = $1', [userId]);
+      let cartId;
+
+      if (cartResult.rows.length === 0) {
+        const newCart = await db.query(
+          'INSERT INTO carts (user_id) VALUES ($1) RETURNING cart_id',
+          [userId]
+        );
+        cartId = newCart.rows[0].cart_id;
+      } else {
+        cartId = cartResult.rows[0].cart_id;
+      }
+
+      const itemCheck = await db.query(
+        'SELECT quantity FROM cart_items WHERE cart_id = $1 AND event_id = $2',
+        [cartId, eventId]
+      );
+
+      if (itemCheck.rows.length > 0) {
+        let targetQuantity;
+        if (delta !== undefined) {
+          targetQuantity = itemCheck.rows[0].quantity + delta;
+        } else {
+          targetQuantity = quantity;
         }
 
-        try {
-          // 1. Verfügbaren Lagerbestand prüfen
-          const eventRes = await pool.query('SELECT event_stock FROM events WHERE event_id = $1', [eventId]);
-            if (eventRes.rows.length === 0) {
-                return res.status(404).json({ error: 'Event existiert nicht.' });
-            }
-            if (eventRes.rows[0].event_stock < quantity) {
-                return res.status(400).json({ error: 'Nicht genügend Tickets verfügbar.' });
-            } 
-
-          // 2. Cart-ID des Nutzers abfragen (oder anlegen falls nicht existent)
-          let cartRes = await pool.query('SELECT cart_id FROM carts WHERE user_id = $1', [userId]);
-          let cartId;
-          if (cartRes.rows.length === 0) {
-            const newCart = await pool.query('INSERT INTO carts (user_id) VALUES ($1) RETURNING cart_id', [userId]);
-            cartId = newCart.rows[0].cart_id;
-          } else {
-            cartId = cartRes.rows[0].cart_id;
-          } 
-
-          // 3. Prüfen, ob Item bereits im Warenkorb liegt
-          const itemRes = await pool.query(
-            'SELECT cart_item_id, quantity FROM cart_items WHERE cart_id = $1 AND event_id = $2',
+        if (targetQuantity <= 0) {
+          await db.query(
+            'DELETE FROM cart_items WHERE cart_id = $1 AND event_id = $2',
             [cartId, eventId]
           );
-
-          if (itemRes.rows.length > 0) {
-            await pool.query(
-              'UPDATE cart_items SET quantity = quantity + $1 WHERE cart_item_id = $2',
-              [quantity, itemRes.rows[0].cart_item_id]
-            );
-            } else {
-              await pool.query(
-                'INSERT INTO cart_items (cart_id, event_id, quantity) VALUES ($1, $2, $3)',
-                [cartId, eventId, quantity]
-              );
-            }
-            
-            return res.status(200).json({ message: 'Artikel zum Warenkorb hinzugefügt.' });
-        } catch (err) {
-            console.error('Fehler bei AddToCartHandler:', err);
-            return res.status(500).json({ error: 'Konnte nicht zum Warenkorb hinzugefügt werden.' });
+        } else {
+          await db.query(
+            'UPDATE cart_items SET quantity = $1 WHERE cart_id = $2 AND event_id = $3',
+            [targetQuantity, cartId, eventId]
+          );
         }
+      } else {
+        await db.query(
+          'INSERT INTO cart_items (cart_id, event_id, quantity) VALUES ($1, $2, $3)',
+          [cartId, eventId, quantity || 1]
+        );
+      }
+
+      return res.status(200).json({ message: 'Warenkorb aktualisiert' });
+    } catch (err) {
+      console.error('Fehler in AddToCartHandler:', err);
+      return res.status(500).json({ error: 'Interner Serverfehler' });
     }
+  }
 }
 
 module.exports = AddToCartHandler;

@@ -5,6 +5,7 @@ const authenticateToken = require('../config/auth');
 const routes = [
   ['get',  '/',      'GetCartHandler',   [authenticateToken]],
   ['post', '/items', 'AddToCartHandler', [authenticateToken]],
+  ['delete', '/items/:eventId', 'DeleteCartItemHandler', [authenticateToken]],
 ];
 
 routes.forEach(([method, path, handlerName, middlewares = []]) => {
