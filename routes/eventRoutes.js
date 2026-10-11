@@ -6,6 +6,7 @@ const routes = [
   ['get',  '/:id', 'GetEventByIdHandler'],
   ['post', '/',    'CreateEventHandler'],
   ['delete', '/:id', 'DeleteEventHandler'],
+  ['patch',  '/:id', 'UpdateEventHandler' ]
 ];
 
 routes.forEach(([method, path, handlerName]) => {
