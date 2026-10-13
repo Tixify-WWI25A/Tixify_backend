@@ -2,7 +2,8 @@ const pool = require('../config/db');
 
 class CreateEventHandler {
     async execute(req, res) {
-        const { title, description, location, category, event_date, price, logo_url, event_stock } = req.body;
+        const {title, description, location, category, event_date, price, logo_url, event_stock, address, latitude, longitude 
+        } = req.body;
 
         // Validierung der Pflichtfelder
         if (!title || !location || !event_date || price === undefined || event_stock === undefined) {
@@ -13,8 +14,8 @@ class CreateEventHandler {
 
         try {
             const query = `
-              INSERT INTO events (title, description, location, category, event_date, price, logo_url, event_stock)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+              INSERT INTO events (title, description, location, category, event_date, price, logo_url, event_stock, address, latitude, longitude)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
               RETURNING *;
             `;
             
@@ -26,7 +27,10 @@ class CreateEventHandler {
               event_date,
               parseFloat(price),
               logo_url || null,
-              parseInt(event_stock, 10)
+              parseInt(event_stock, 10),
+              address || location, // Fallback auf location, falls keine separate Adresse geschickt wird
+              latitude ? parseFloat(latitude) : null,
+              longitude ? parseFloat(longitude) : null
             ];
 
             const result = await pool.query(query, values);
