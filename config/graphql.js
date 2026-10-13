@@ -11,6 +11,8 @@ const typeDefs = `#graphql
     event_stock: Int!
     logo_url: String
     description: String
+    latitude: Float
+    longitude: Float
   }
 
   type Query {
@@ -29,7 +31,9 @@ const resolvers = {
       const res = await db.query('SELECT * FROM events ORDER BY event_id ASC');
       return res.rows.map(row => ({
         ...row,
-        price: parseFloat(row.price)
+        price: parseFloat(row.price),
+        latitude: row.latitude !== null && row.latitude !== undefined ? parseFloat(row.latitude) : null,
+        longitude: row.longitude !== null && row.longitude !== undefined ? parseFloat(row.longitude) : null
       }));
     },
     event: async (_, { id }) => {
@@ -37,7 +41,9 @@ const resolvers = {
       if (!res.rows[0]) return null;
       return {
         ...res.rows[0],
-        price: parseFloat(res.rows[0].price)
+        price: parseFloat(res.rows[0].price),
+        latitude: res.rows[0].latitude !== null && res.rows[0].latitude !== undefined ? parseFloat(res.rows[0].latitude) : null,
+        longitude: res.rows[0].longitude !== null && res.rows[0].longitude !== undefined ? parseFloat(res.rows[0].longitude) : null
       };
     }
   },
@@ -50,7 +56,9 @@ const resolvers = {
       if (!res.rows[0]) throw new Error('Event nicht gefunden');
       return {
         ...res.rows[0],
-        price: parseFloat(res.rows[0].price)
+        price: parseFloat(res.rows[0].price),
+        latitude: res.rows[0].latitude !== null && res.rows[0].latitude !== undefined ? parseFloat(res.rows[0].latitude) : null,
+        longitude: res.rows[0].longitude !== null && res.rows[0].longitude !== undefined ? parseFloat(res.rows[0].longitude) : null
       };
     }
   }
