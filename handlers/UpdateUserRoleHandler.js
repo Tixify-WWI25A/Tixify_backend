@@ -11,7 +11,7 @@ class UpdateUserRoleHandler {
 
     try {
       const result = await pool.query(
-        'UPDATE users SET role = $1 WHERE user_id = $2 RETURNING user_id AS id, name, email, role',
+        'UPDATE users SET role = $1 WHERE user_id = $2 RETURNING user_id AS id, username AS name, email, role',
         [role, id]
       );
 
