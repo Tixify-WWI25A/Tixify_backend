@@ -7,6 +7,9 @@ class UpdateEventHandler {
       title,
       description,
       location,
+      address,
+      latitude,
+      longitude,
       category,
       event_date,
       price,
@@ -24,12 +27,15 @@ class UpdateEventHandler {
         SET title       = COALESCE($1, title),
             description = COALESCE($2, description),
             location    = COALESCE($3, location),
-            category    = COALESCE($4, category),
-            event_date  = COALESCE($5, event_date),
-            price       = COALESCE($6, price),
-            logo_url    = $7,
-            event_stock = COALESCE($8, event_stock)
-        WHERE event_id  = $9
+            address     = COALESCE($4, address),
+            latitude    = COALESCE($5, latitude),
+            longitude   = COALESCE($6, longitude),
+            category    = COALESCE($7, category),
+            event_date  = COALESCE($8, event_date),
+            price       = COALESCE($9, price),
+            logo_url    = $10,
+            event_stock = COALESCE($11, event_stock)
+        WHERE event_id  = $12
         RETURNING *;
       `;
 
@@ -37,6 +43,9 @@ class UpdateEventHandler {
         title !== undefined ? title : null,
         description !== undefined ? description : null,
         location !== undefined ? location : null,
+        address !== undefined ? address : null,
+        latitude !== undefined ? (latitude !== null && latitude !== '' ? parseFloat(latitude) : null) : null,
+        longitude !== undefined ? (longitude !== null && longitude !== '' ? parseFloat(longitude) : null) : null,
         category !== undefined ? category : null,
         event_date !== undefined ? event_date : null,
         price !== undefined ? parseFloat(price) : null,
@@ -45,7 +54,6 @@ class UpdateEventHandler {
         id
       ];
 
-      // Hier wird 'result' sauber deklariert und zugewiesen:
       const result = await pool.query(query, values);
 
       if (result.rows.length === 0) {
