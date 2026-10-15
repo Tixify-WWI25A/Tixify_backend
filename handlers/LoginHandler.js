@@ -10,28 +10,33 @@ class LoginHandler {
       return res.status(400).json({ error: 'E-Mail und Passwort erforderlich.' });
     }
 
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('FATAL: JWT_SECRET ist nicht konfiguriert.');
+      return res.status(500).json({ error: 'Server-Konfigurationsfehler.' });
+    }
+
     try {
-      const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      const result = await pool.query(
+        'SELECT user_id, username, email, password_hash, role FROM users WHERE email = $1',
+        [email.trim().toLowerCase()]
+      );
+
       if (result.rows.length === 0) {
         return res.status(401).json({ error: 'Ungültige Anmeldedaten.' });
       }
 
       const user = result.rows[0];
-      const hash = user.password_hash || user.password;
 
-      if (!hash) {
-        return res.status(500).json({ error: 'Kein Passwort-Hash vorhanden.' });
-      }
-
-      const match = await bcrypt.compare(password, hash);
+      const match = await bcrypt.compare(password, user.password_hash);
       if (!match) {
         return res.status(401).json({ error: 'Ungültige Anmeldedaten.' });
       }
 
       const token = jwt.sign(
         { userId: user.user_id, email: user.email, role: user.role },
-        process.env.JWT_SECRET || 'tixify_super_secret_jwt_key_2026',
-        { expiresIn: '24h' }
+        jwtSecret,
+        { algorithm: 'HS256', expiresIn: '1h' }
       );
 
       return res.status(200).json({
@@ -39,7 +44,7 @@ class LoginHandler {
         token,
         user: {
           id: user.user_id,
-          name: user.username || user.name,
+          name: user.username,
           email: user.email,
           role: user.role
         }
