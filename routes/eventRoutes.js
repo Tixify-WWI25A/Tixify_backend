@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 
+const checkLogin = require('../config/auth');
+const requireAdmin = require('../config/requireAdmin');
+
 const routes = [
-  ['get',  '/',    'GetEventsHandler'],
-  ['get',  '/:id', 'GetEventByIdHandler'],
-  ['post', '/',    'CreateEventHandler'],
-  ['delete', '/:id', 'DeleteEventHandler'],
-  ['patch',  '/:id', 'UpdateEventHandler' ]
+  ['get', '/', 'GetEventsHandler'],
+  ['get', '/:id', 'GetEventByIdHandler'],
+  ['post', '/', 'CreateEventHandler', [checkLogin, requireAdmin]],
+  ['delete', '/:id', 'DeleteEventHandler', [checkLogin, requireAdmin]],
+  ['patch', '/:id', 'UpdateEventHandler', [checkLogin, requireAdmin]]
 ];
 
 routes.forEach(([method, path, handlerName]) => {
