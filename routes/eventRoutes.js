@@ -18,7 +18,7 @@ routes.forEach(([method, path, handlerName]) => {
   const HandlerClass = imported;
   const handlerInstance = new HandlerClass();
 
-  router[method](path, (req, res) => handlerInstance.execute(req, res));
+  router[method](path, ...middlewares, (req, res) => handlerInstance.execute(req, res));
 });
 
 module.exports = router;
