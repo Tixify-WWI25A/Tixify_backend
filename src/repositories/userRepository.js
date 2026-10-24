@@ -1,7 +1,15 @@
+// Basiert auf unserem SQL aus handlers/LoginHandler, RegisterHandler und den User-Handlern (Abfragen auf die Tabelle users).
+// Mit KI überarbeitet (KI-Log Nr. 8): an einer Stelle gesammelt; doppelte E-Mail wird über einen Datenbank-Index erkannt (409); Passwort-Hash verlässt das Modul nur für den Login.
+// Als Klasse umgebaut, passend zu unseren Handler-Klassen (KI-Log Nr. 9).
 const pool = require('../config/db');
 const { HttpError } = require('../middleware/errorHandler');
 
+/**
+ * Einzige Stelle mit SQL für Nutzer (Repository-Muster).
+ * Das Passwort-Hash verlässt diese Klasse nur für den Login-Vergleich.
+ */
 class UserRepository {
+  /** Datenbankzeile → Nutzer, wie ihn die API zurückgibt (ohne Passwort-Hash) */
   toUser(row) {
     if (!row) return null;
     return {
@@ -21,12 +29,13 @@ class UserRepository {
       );
       return this.toUser(rows[0]);
     } catch (err) {
-      const UNIQUE_VIOLATION = '23505';
-      if (err.code === UNIQUE_VIOLATION) throw new HttpError(409, 'Diese E-Mail-Adresse ist bereits registriert.');
+      // Eindeutiger Index auf email: greift auch, wenn zwei Registrierungen gleichzeitig ankommen
+      if (err.code === '23505') throw new HttpError(409, 'Diese E-Mail-Adresse ist bereits registriert.');
       throw err;
     }
   }
 
+  /** Für den Login: Nutzer inklusive Passwort-Hash */
   async findForLogin(email) {
     const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (!rows[0]) return null;
@@ -54,4 +63,5 @@ class UserRepository {
   }
 }
 
+// Eine gemeinsame Instanz: Handler nutzen sie wie bisher, z. B. users.findForLogin(email)
 module.exports = new UserRepository();

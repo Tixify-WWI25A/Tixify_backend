@@ -1,5 +1,5 @@
 // Mit KI erstellt (KI-Log Nr. 8), vom Team geprüft.
-// von uns erweitert: Least recently used-Verhalten in get(), Zähler für Rauswürfe (evictions).
+// Mit KI erweitert (KI-Log Nr. 11): LRU-Verhalten in get(), Zähler für Rauswürfe (evictions).
 /**
  * Zwischenspeicher im gateway (BFF) für öffentliche Event-Abfragen – eine HashMap mit Ablaufzeit.
  *
@@ -31,6 +31,7 @@ class ResponseCache {
       this.misses++;
       return null;
     }
+    // LRU: gerade benutzt → ans Ende der Reihenfolge
     this.entries.delete(key);
     this.entries.set(key, entry);
     this.hits++;
@@ -50,6 +51,7 @@ class ResponseCache {
     this.entries.clear();
   }
 
+  /** Für /health: Wie gut wirkt der Cache? Viele evictions → maxEntries zu klein. */
   stats() {
     return { entries: this.entries.size, hits: this.hits, misses: this.misses, evictions: this.evictions };
   }

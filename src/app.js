@@ -1,5 +1,6 @@
 // Basiert auf unserem app.js / config/server.js (Express-App, Routen mit app.use('/api/…') einhängen).
 // Mit KI überarbeitet (KI-Log Nr. 8): Weiterleitung an catalog und orders, Zwischenspeicher, CORS nur für unsere Frontends, helmet, Request-ID; Events, Warenkorb, Geocoding und Frontend-Dateien in eigene Repos verschoben.
+// Mit KI erweitert (KI-Log Nr. 11): Lebensdauer des Caches über CACHE_TTL_MS einstellbar.
 const crypto = require('crypto');
 const express = require('express');
 const helmet = require('helmet');
@@ -36,13 +37,13 @@ function corsOptions() {
  * @param {string} [options.catalogUrl]  Standard: CATALOG_URL
  * @param {string} [options.ordersUrl]   Standard: ORDERS_URL
  * @param {number} [options.loginLimit]  Login-Versuche pro 15 Minuten (Standard 10)
- * @param {number} [options.cacheTtlMs]  Standard 30 s
+ * @param {number} [options.cacheTtlMs]  Standard: CACHE_TTL_MS oder 30 s
  */
 function createApp(options = {}) {
   const catalogUrl = options.catalogUrl || process.env.CATALOG_URL;
   const ordersUrl = options.ordersUrl || process.env.ORDERS_URL;
   const app = express();
-  const cache = new ResponseCache({ ttlMs: options.cacheTtlMs ?? 30000 });
+  const cache = new ResponseCache({ ttlMs: options.cacheTtlMs ?? (Number(process.env.CACHE_TTL_MS) || 30000) });
   const proxies = createProxies({ catalogUrl, ordersUrl, cache });
 
   app.disable('x-powered-by');

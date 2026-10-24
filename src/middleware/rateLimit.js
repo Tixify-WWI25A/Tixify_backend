@@ -1,5 +1,7 @@
+// Mit KI erstellt (KI-Log Nr. 8), vom Team geprüft.
 const { rateLimit } = require('express-rate-limit');
 
+/** Gegen Passwort-Raten: höchstens `limit` Login-Versuche pro IP in 15 Minuten */
 function createLoginLimiter(limit = 10) {
   return rateLimit({
     windowMs: 15 * 60 * 1000,
