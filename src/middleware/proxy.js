@@ -1,4 +1,5 @@
 // Mit KI erstellt (KI-Log Nr. 8), vom Team geprüft.
+// Mit KI erweitert (KI-Log Nr. 24): eigenes Zeitlimit für orders (R-22).
 const { createProxyMiddleware, responseInterceptor } = require('http-proxy-middleware');
 
 /**
@@ -11,6 +12,10 @@ const ROUTES = {
 };
 
 const TIMEOUT_MS = 15000;
+// Ein Kauf ruft nacheinander catalog (5 s) und PayPal (je 10 s) auf und kann deshalb länger als 15 s dauern.
+// Knapp unter dem festen 30-s-Limit des Heroku-Routers, damit das gateway noch selbst antworten kann.
+// Bricht es trotzdem ab, ist ein erneuter Klick sicher: Capture ist idempotent (PayPal-Request-Id).
+const ORDERS_TIMEOUT_MS = 28000;
 
 function matches(path, prefixes) {
   return prefixes.some((p) => path === p || path.startsWith(`${p}/`) || path.startsWith(`${p}?`));
@@ -66,6 +71,8 @@ function createProxies({ catalogUrl, ordersUrl, cache }) {
 
   const orders = createProxyMiddleware({
     ...common,
+    proxyTimeout: ORDERS_TIMEOUT_MS,
+    timeout: ORDERS_TIMEOUT_MS,
     target: ordersUrl,
     pathFilter: (path) => matches(path, ROUTES.orders),
     on: { ...common.on, error: onProxyError('orders') }
@@ -88,4 +95,4 @@ function createProxies({ catalogUrl, ordersUrl, cache }) {
   return { catalog, orders, serveFromCache };
 }
 
-module.exports = { createProxies, ROUTES };
+module.exports = { createProxies, ROUTES, TIMEOUT_MS, ORDERS_TIMEOUT_MS };
