@@ -4,16 +4,19 @@
 Das gateway leitet jede Anfrage an den zuständigen Service weiter und enthält zusätzlich den
 **identity-Service** (Registrierung, Login, Benutzerverwaltung).
 
+Live: https://tixify-c7a903638236.herokuapp.com/health
+Frontends: [MPA](https://tixify-wwi25a.github.io/Tixify_frontend/) · [Admin-SPA](https://tixify-wwi25a.github.io/tixify-frontend-spa/)
+
 | Repo | Aufgabe | Heroku-App |
 |---|---|---|
-| **tixify-gateway** | **Eingangstür, Login, Benutzer** | `tixify` |
+| **Tixify_backend** (gateway) | **Eingangstür, Login, Benutzer** | `tixify` |
 | tixify-catalog | Events, GraphQL, Reservierungen | `tixify-catalog` |
 | tixify-orders | Warenkorb, PayPal, Bestellungen, Mails | `tixify-orders` (`web` + `worker`) |
 
 ```
  MPA / SPA ──► gateway (tixify) ──┬─► identity  (im selben Prozess, Schema identity)
                                   ├─► catalog   /api/events, /api/geocode, /graphql
-                                  └─► orders    /api/cart, /api/orders, /api/tickets
+                                  └─► orders    /api/cart, /api/orders
                                   ✕   /internal/…  (nur Service-zu-Service, nie von außen)
 ```
 
